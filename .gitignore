@@ -10,3 +10,6 @@ Thumbs.db
 
 # Logs / temp
 *.log
+
+# Local working docs (specs, plans) — kept off the public repo
+docs/
