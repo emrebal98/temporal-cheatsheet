@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Temporal.cheatsheet</title>
+    <meta name="description" content="Modern date & time for JavaScript — a Temporal API cheatsheet.">
+    <link rel="stylesheet" href="style.css">
+    <script src="main.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+
+    <header class="top">
+        <div class="brand">
+            <h1>Temporal<span class="tag">.cheatsheet</span></h1>
+            <span class="sub">// modern date &amp; time for JavaScript</span>
+        </div>
+        <div class="badges">
+            <span class="badge">TC39 Stage 3</span>
+            <span class="badge warn">Limited availability</span>
+            <span class="badge">Polyfill: @js-temporal/polyfill</span>
+        </div>
+    </header>
+
+    <nav class="toc" aria-label="Sections">
+        <a href="#overview">Overview</a>
+        <a href="#now" class="accent">Now</a>
+        <span class="sep"></span>
+        <a href="#instant" class="accent2">Instant</a>
+        <a href="#zoned" class="accent2">ZonedDateTime</a>
+        <a href="#pdatetime" class="accent2">PlainDateTime</a>
+        <a href="#pdate" class="accent2">PlainDate</a>
+        <a href="#ptime" class="accent2">PlainTime</a>
+        <a href="#pyearmonth" class="accent2">PlainYearMonth</a>
+        <a href="#pmonthday" class="accent2">PlainMonthDay</a>
+        <span class="sep"></span>
+        <a href="#duration" class="accent">Duration</a>
+        <a href="#shared">Shared API</a>
+        <a href="#conversions">Conversions</a>
+        <a href="#calendars">Calendars</a>
+        <a href="#format">RFC 9557</a>
+        <a href="#date-migration">vs Date</a>
+        <a href="#gotchas">Gotchas</a>
+    </nav>
+
+    <!-- =========================================================
+       OVERVIEW
+       ========================================================= -->
+    <section id="overview" class="block">
+        <h2>Overview</h2>
+        <div class="grid">
+            <div class="card span-2">
+                <div class="card-head">
+                    <h3>What is Temporal?</h3>
+                    <span class="tag-type">namespace</span>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <code class="inline">Temporal</code> is a global namespace (like <code
+                            class="inline">Math</code> or
+                        <code class="inline">Intl</code>) — <em>not</em> a constructor. It is the modern replacement for
+                        <code class="inline">Date</code>, with proper time-zone handling, calendars, immutability,
+                        nanosecond precision, and a clear separation between absolute instants, wall-clock times,
+                        and durations.
+                    </p>
+                    <div class="hierarchy">
+                        <pre>
+<span class="h-ns">Temporal</span>
+├── <span class="h-ns">.Now</span>                  <span class="h-c">// current time helpers</span>
+├── <span class="h-class">.Instant</span>             <span class="h-c">// fixed point on the timeline (ns since epoch)</span>
+├── <span class="h-class">.ZonedDateTime</span>       <span class="h-c">// instant + time zone + calendar</span>
+├── <span class="h-class">.PlainDateTime</span>       <span class="h-c">// wall-clock date+time (no zone)</span>
+│   ├── <span class="h-class">.PlainDate</span>       <span class="h-c">// year + month + day</span>
+│   │   ├── <span class="h-class">.PlainYearMonth</span>
+│   │   └── <span class="h-class">.PlainMonthDay</span>
+│   └── <span class="h-class">.PlainTime</span>       <span class="h-c">// hour..nanosecond</span>
+└── <span class="h-class">.Duration</span>            <span class="h-c">// difference between two time points</span>
+</pre>
+                    </div>
+                    <div class="note info">
+                        <strong>Rule of thumb:</strong> use <code class="inline">Instant</code> for timestamps,
+                        <code class="inline">ZonedDateTime</code> for "real-world" events, and <code
+                            class="inline">Plain*</code>
+                        when the time zone is irrelevant (birthdays, business hours, recurring alarms).
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Key principles</h3>
+                    <span class="tag-type">concepts</span>
+                </div>
+                <div class="card-body">
+                    <table class="ref">
+                        <tr>
+                            <td>Immutable</td>
+                            <td>All methods return new instances</td>
+                        </tr>
+                        <tr>
+                            <td>Precise</td>
+                            <td>Nanosecond resolution via BigInt</td>
+                        </tr>
+                        <tr>
+                            <td>Explicit</td>
+                            <td>Time zones &amp; calendars are first-class</td>
+                        </tr>
+                        <tr>
+                            <td>Type-safe</td>
+                            <td>Separate types prevent misuse</td>
+                        </tr>
+                        <tr>
+                            <td>ISO default</td>
+                            <td>ISO 8601 calendar unless specified</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Polyfill setup</h3>
+                    <span class="tag-type">install</span>
+                </div>
+                <div class="card-body">
+                    <p>Until natively shipped everywhere, use a polyfill.</p>
+                    <pre><span class="c">// npm install @js-temporal/polyfill</span>
+<span class="k">import</span> { Temporal } <span class="k">from</span> <span class="s">"@js-temporal/polyfill"</span>;
+
+<span class="c">// or lighter-weight:</span>
+<span class="c">// npm install temporal-polyfill</span>
+<span class="k">import</span> { Temporal } <span class="k">from</span> <span class="s">"temporal-polyfill"</span>;<button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       NOW
+       ========================================================= -->
+    <section id="now" class="block">
+        <h2>Temporal.Now</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-head">
+                    <h3>Getting the current time</h3>
+                    <span class="tag-type">Temporal.Now</span>
+                </div>
+                <div class="card-body">
+                    <pre>Temporal.Now.<span class="m">instant</span>()
+  <span class="c">// → Temporal.Instant (nanosecond timestamp)</span>
+
+Temporal.Now.<span class="m">zonedDateTimeISO</span>()
+  <span class="c">// → ZonedDateTime in system zone, ISO calendar</span>
+
+Temporal.Now.<span class="m">zonedDateTimeISO</span>(<span class="s">"Asia/Kolkata"</span>)
+  <span class="c">// → ZonedDateTime in a specific zone</span>
+
+Temporal.Now.<span class="m">plainDateTimeISO</span>()
+Temporal.Now.<span class="m">plainDateISO</span>()
+Temporal.Now.<span class="m">plainTimeISO</span>()
+
+Temporal.Now.<span class="m">timeZoneId</span>()
+  <span class="c">// → "Asia/Kolkata" (system zone string)</span><button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Epoch readings</h3>
+                    <span class="tag-type">number / bigint</span>
+                </div>
+                <div class="card-body">
+                    <pre><span class="k">const</span> now = Temporal.Now.<span class="m">instant</span>();
+
+now.<span class="m">epochMilliseconds</span>;   <span class="c">// number</span>
+now.<span class="m">epochNanoseconds</span>;    <span class="c">// bigint</span>
+
+<span class="c">// Equivalent of Date.now():</span>
+Temporal.Now.<span class="m">instant</span>().<span class="m">epochMilliseconds</span>;<button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       INSTANT
+       ========================================================= -->
+    <section id="instant" class="block b2">
+        <h2>Temporal.Instant</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-head">
+                    <h3>Creating instants</h3>
+                    <span class="tag-type">point in time</span>
+                </div>
+                <div class="card-body">
+                    <p>A single point on the global timeline. No zone, no calendar.</p>
+                    <pre>Temporal.Instant.<span class="m">from</span>(<span class="s">"2025-12-25T10:00Z"</span>);
+Temporal.Instant.<span class="m">from</span>(<span class="s">"2025-12-25T10:00+05:30"</span>);
+
+Temporal.Instant.<span class="m">fromEpochMilliseconds</span>(<span class="n">1735128000000</span>);
+Temporal.Instant.<span class="m">fromEpochNanoseconds</span>(<span class="n">1735128000000000000n</span>);
+
+<span class="c">// From legacy Date:</span>
+Temporal.Instant.<span class="m">fromEpochMilliseconds</span>(<span class="k">new</span> <span class="t">Date</span>().getTime());<button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Arithmetic &amp; comparison</h3>
+                    <span class="tag-type">methods</span>
+                </div>
+                <div class="card-body">
+                    <pre><span class="k">const</span> a = Temporal.Instant.<span class="m">from</span>(<span class="s">"2025-01-01T00:00Z"</span>);
+<span class="k">const</span> b = a.<span class="m">add</span>({ hours: <span class="n">3</span>, minutes: <span class="n">30</span> });
+
+a.<span class="m">since</span>(b);                    <span class="c">// Duration (b → a)</span>
+a.<span class="m">until</span>(b);                    <span class="c">// Duration (a → b)</span>
+a.<span class="m">equals</span>(b);                   <span class="c">// boolean</span>
+Temporal.Instant.<span class="m">compare</span>(a, b); <span class="c">// -1 | 0 | 1</span>
+
+a.<span class="m">round</span>({ smallestUnit: <span class="s">"minute"</span> });<button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Pin to a zone / calendar</h3>
+                    <span class="tag-type">conversion</span>
+                </div>
+                <div class="card-body">
+                    <pre><span class="k">const</span> inst = Temporal.Now.<span class="m">instant</span>();
+
+inst.<span class="m">toZonedDateTimeISO</span>(<span class="s">"America/New_York"</span>);
+  <span class="c">// → ZonedDateTime</span>
+
+inst.<span class="m">toString</span>();                 <span class="c">// ISO 8601 (UTC)</span>
+inst.<span class="m">toLocaleString</span>(<span class="s">"en-US"</span>);
+inst.<span class="m">toJSON</span>();<button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       ZONED DATE TIME
+       ========================================================= -->
+    <section id="zoned" class="block b2">
+        <h2>Temporal.ZonedDateTime</h2>
+        <div class="grid">
+            <div class="card span-2">
+                <div class="card-head">
+                    <h3>The "complete" type — instant + time zone + calendar</h3>
+                    <span class="tag-type">zoned date-time</span>
+                </div>
+                <div class="card-body">
+                    <p>
+                        Use this for any real-world moment that needs a calendar &amp; time-zone interpretation.
+                        Handles DST and offset transitions correctly.
+                    </p>
+                    <pre><span class="c">// From an RFC 9557 string:</span>
+Temporal.ZonedDateTime.<span class="m">from</span>(<span class="s">"2025-12-25T09:00[Asia/Kolkata]"</span>);
+
+<span class="c">// From a property bag:</span>
+Temporal.ZonedDateTime.<span class="m">from</span>({
+  year: <span class="n">2025</span>, month: <span class="n">12</span>, day: <span class="n">25</span>,
+  hour: <span class="n">9</span>, minute: <span class="n">0</span>,
+  timeZone: <span class="s">"Asia/Kolkata"</span>,
+  calendar: <span class="s">"iso8601"</span>                <span class="c">// default</span>
+});
+
+<span class="c">// Disambiguation for DST gaps/overlaps:</span>
+Temporal.ZonedDateTime.<span class="m">from</span>(input, {
+  disambiguation: <span class="s">"compatible"</span> <span class="c">// | "earlier" | "later" | "reject"</span>
+});<button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Field access</h3>
+                    <span class="tag-type">getters</span>
+                </div>
+                <div class="card-body">
+                    <pre><span class="k">const</span> z = Temporal.Now.<span class="m">zonedDateTimeISO</span>();
+
+z.<span class="m">year</span>; z.<span class="m">month</span>; z.<span class="m">day</span>;
+z.<span class="m">hour</span>; z.<span class="m">minute</span>; z.<span class="m">second</span>;
+z.<span class="m">millisecond</span>; z.<span class="m">microsecond</span>; z.<span class="m">nanosecond</span>;
+
+z.<span class="m">dayOfWeek</span>;     <span class="c">// 1 (Mon) … 7 (Sun)</span>
+z.<span class="m">dayOfYear</span>;     <span class="c">// 1 … 366</span>
+z.<span class="m">weekOfYear</span>;
+z.<span class="m">yearOfWeek</span>;
+z.<span class="m">daysInMonth</span>;
+z.<span class="m">daysInYear</span>;
+z.<span class="m">inLeapYear</span>;
+
+z.<span class="m">timeZoneId</span>;    <span class="c">// "Asia/Kolkata"</span>
+z.<span class="m">offset</span>;        <span class="c">// "+05:30"</span>
+z.<span class="m">offsetNanoseconds</span>;
+z.<span class="m">hoursInDay</span>;    <span class="c">// usually 24, 23/25 on DST</span>
+z.<span class="m">epochMilliseconds</span>;
+z.<span class="m">epochNanoseconds</span>;<button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Modify fields (immutably)</h3>
+                    <span class="tag-type">with / arithmetic</span>
+                </div>
+                <div class="card-body">
+                    <pre>z.<span class="m">with</span>({ hour: <span class="n">9</span>, minute: <span class="n">0</span> });
+z.<span class="m">withCalendar</span>(<span class="s">"japanese"</span>);
+z.<span class="m">withTimeZone</span>(<span class="s">"Europe/London"</span>);
+z.<span class="m">withPlainTime</span>(<span class="s">"14:30"</span>);
+
+z.<span class="m">add</span>({ days: <span class="n">7</span> });
+z.<span class="m">subtract</span>({ hours: <span class="n">2</span>, minutes: <span class="n">30</span> });
+
+z.<span class="m">round</span>({ smallestUnit: <span class="s">"hour"</span> });
+z.<span class="m">startOfDay</span>();              <span class="c">// midnight in this zone</span>
+
+z.<span class="m">getTimeZoneTransition</span>({ direction: <span class="s">"next"</span> });
+  <span class="c">// → next DST change as ZonedDateTime | null</span><button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       PLAIN DATE TIME
+       ========================================================= -->
+    <section id="pdatetime" class="block b2">
+        <h2>Temporal.PlainDateTime</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-head">
+                    <h3>Wall-clock date + time</h3>
+                    <span class="tag-type">no time zone</span>
+                </div>
+                <div class="card-body">
+                    <p>Use when the time zone is unknown, irrelevant, or set later (forms, schedules).</p>
+                    <pre>Temporal.PlainDateTime.<span class="m">from</span>(<span class="s">"2025-12-25T09:30:00"</span>);
+
+Temporal.PlainDateTime.<span class="m">from</span>({
+  year: <span class="n">2025</span>, month: <span class="n">12</span>, day: <span class="n">25</span>,
+  hour: <span class="n">9</span>, minute: <span class="n">30</span>
+});
+
+<span class="c">// Overflow control:</span>
+Temporal.PlainDateTime.<span class="m">from</span>(
+  { year: <span class="n">2025</span>, month: <span class="n">2</span>, day: <span class="n">30</span> },
+  { overflow: <span class="s">"reject"</span> }   <span class="c">// throws (default: "constrain")</span>
+);<button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Common methods</h3>
+                    <span class="tag-type">API</span>
+                </div>
+                <div class="card-body">
+                    <pre><span class="k">const</span> dt = Temporal.PlainDateTime.<span class="m">from</span>(<span class="s">"2025-12-25T09:30"</span>);
+
+dt.<span class="m">with</span>({ hour: <span class="n">12</span> });
+dt.<span class="m">withCalendar</span>(<span class="s">"hebrew"</span>);
+dt.<span class="m">withPlainTime</span>(<span class="s">"00:00"</span>);
+
+dt.<span class="m">add</span>({ months: <span class="n">1</span> });
+dt.<span class="m">subtract</span>({ days: <span class="n">10</span> });
+dt.<span class="m">since</span>(other);
+dt.<span class="m">until</span>(other);
+
+dt.<span class="m">round</span>({ smallestUnit: <span class="s">"minute"</span> });
+
+dt.<span class="m">toZonedDateTime</span>(<span class="s">"Asia/Kolkata"</span>);
+dt.<span class="m">toPlainDate</span>();
+dt.<span class="m">toPlainTime</span>();<button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       PLAIN DATE
+       ========================================================= -->
+    <section id="pdate" class="block b2">
+        <h2>Temporal.PlainDate</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-head">
+                    <h3>Calendar dates</h3>
+                    <span class="tag-type">year-month-day</span>
+                </div>
+                <div class="card-body">
+                    <p>Ideal for birthdays, anniversaries, deadlines — anything where time-of-day is irrelevant.</p>
+                    <pre>Temporal.PlainDate.<span class="m">from</span>(<span class="s">"2025-12-25"</span>);
+Temporal.PlainDate.<span class="m">from</span>({
+  year: <span class="n">2025</span>, month: <span class="n">12</span>, day: <span class="n">25</span>
+});
+
+<span class="c">// Non-ISO calendar:</span>
+Temporal.PlainDate.<span class="m">from</span>(<span class="s">"2025-12-25[u-ca=hebrew]"</span>);<button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Arithmetic &amp; conversion</h3>
+                    <span class="tag-type">examples</span>
+                </div>
+                <div class="card-body">
+                    <pre><span class="k">const</span> d = Temporal.PlainDate.<span class="m">from</span>(<span class="s">"2025-12-25"</span>);
+
+d.<span class="m">dayOfWeek</span>;            <span class="c">// 4 (Thu)</span>
+d.<span class="m">daysInMonth</span>;          <span class="c">// 31</span>
+d.<span class="m">inLeapYear</span>;           <span class="c">// false</span>
+
+d.<span class="m">add</span>({ days: <span class="n">30</span> });
+d.<span class="m">subtract</span>({ months: <span class="n">1</span> });
+
+<span class="c">// Difference as Duration:</span>
+<span class="k">const</span> diff = d.<span class="m">until</span>(
+  Temporal.PlainDate.<span class="m">from</span>(<span class="s">"2026-01-01"</span>),
+  { largestUnit: <span class="s">"day"</span> }
+);
+diff.<span class="m">days</span>;  <span class="c">// 7</span>
+
+d.<span class="m">toPlainDateTime</span>(<span class="s">"09:00"</span>);
+d.<span class="m">toZonedDateTime</span>({
+  timeZone: <span class="s">"Asia/Kolkata"</span>,
+  plainTime: <span class="s">"09:00"</span>
+});
+d.<span class="m">toPlainYearMonth</span>();
+d.<span class="m">toPlainMonthDay</span>();<button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       PLAIN TIME
+       ========================================================= -->
+    <section id="ptime" class="block b2">
+        <h2>Temporal.PlainTime</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-head">
+                    <h3>Wall-clock time, no date</h3>
+                    <span class="tag-type">HH:MM:SS.sssssssss</span>
+                </div>
+                <div class="card-body">
+                    <p>For recurring daily times: an alarm at 8:00, lunch break at 12:30, etc.</p>
+                    <pre>Temporal.PlainTime.<span class="m">from</span>(<span class="s">"09:30:00"</span>);
+Temporal.PlainTime.<span class="m">from</span>({ hour: <span class="n">9</span>, minute: <span class="n">30</span> });
+
+<span class="k">const</span> t = Temporal.PlainTime.<span class="m">from</span>(<span class="s">"09:30"</span>);
+
+t.<span class="m">hour</span>; t.<span class="m">minute</span>; t.<span class="m">second</span>;
+t.<span class="m">millisecond</span>; t.<span class="m">microsecond</span>; t.<span class="m">nanosecond</span>;
+
+t.<span class="m">with</span>({ minute: <span class="n">45</span> });
+t.<span class="m">add</span>({ hours: <span class="n">2</span> });   <span class="c">// wraps at 24h, no overflow</span>
+t.<span class="m">round</span>({ smallestUnit: <span class="s">"minute"</span> });
+
+Temporal.PlainTime.<span class="m">compare</span>(t1, t2);
+t.<span class="m">equals</span>(t2);<button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       PLAIN YEAR MONTH / MONTH DAY
+       ========================================================= -->
+    <section id="pyearmonth" class="block b2">
+        <h2>Temporal.PlainYearMonth &amp; Temporal.PlainMonthDay</h2>
+        <div class="grid">
+            <div class="card" id="pyearmonth-card">
+                <div class="card-head">
+                    <h3>PlainYearMonth</h3>
+                    <span class="tag-type">year + month</span>
+                </div>
+                <div class="card-body">
+                    <p>Billing cycles, magazine issues, monthly stats.</p>
+                    <pre><span class="k">const</span> ym = Temporal.PlainYearMonth.<span class="m">from</span>(<span class="s">"2025-12"</span>);
+
+ym.<span class="m">year</span>;             <span class="c">// 2025</span>
+ym.<span class="m">month</span>;            <span class="c">// 12</span>
+ym.<span class="m">daysInMonth</span>;      <span class="c">// 31</span>
+ym.<span class="m">monthsInYear</span>;     <span class="c">// 12</span>
+
+ym.<span class="m">add</span>({ months: <span class="n">1</span> });
+ym.<span class="m">until</span>(other, { largestUnit: <span class="s">"month"</span> });
+
+ym.<span class="m">toPlainDate</span>({ day: <span class="n">15</span> });<button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card" id="pmonthday">
+                <div class="card-head">
+                    <h3>PlainMonthDay</h3>
+                    <span class="tag-type">month + day</span>
+                </div>
+                <div class="card-body">
+                    <p>Annually recurring events: birthdays, holidays.</p>
+                    <pre><span class="k">const</span> md = Temporal.PlainMonthDay.<span class="m">from</span>(<span class="s">"12-25"</span>);
+
+md.<span class="m">monthCode</span>;        <span class="c">// "M12"</span>
+md.<span class="m">day</span>;              <span class="c">// 25</span>
+
+<span class="c">// Project onto a specific year:</span>
+md.<span class="m">toPlainDate</span>({ year: <span class="n">2026</span> });
+  <span class="c">// → PlainDate 2026-12-25</span>
+
+md.<span class="m">equals</span>(other);
+md.<span class="m">with</span>({ day: <span class="n">31</span> });<button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       DURATION
+       ========================================================= -->
+    <section id="duration" class="block">
+        <h2>Temporal.Duration</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-head">
+                    <h3>Creating durations</h3>
+                    <span class="tag-type">time span</span>
+                </div>
+                <div class="card-body">
+                    <pre>Temporal.Duration.<span class="m">from</span>({
+  hours: <span class="n">2</span>, minutes: <span class="n">30</span>
+});
+
+<span class="c">// ISO 8601 duration string:</span>
+Temporal.Duration.<span class="m">from</span>(<span class="s">"PT2H30M"</span>);     <span class="c">// 2h30m</span>
+Temporal.Duration.<span class="m">from</span>(<span class="s">"P1Y2M10DT2H30M"</span>);
+Temporal.Duration.<span class="m">from</span>(<span class="s">"-PT5M"</span>);        <span class="c">// negative</span>
+
+<span class="c">// Common: result of since()/until() on any class</span>
+<span class="k">const</span> d = a.<span class="m">until</span>(b);<button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Fields &amp; sign</h3>
+                    <span class="tag-type">properties</span>
+                </div>
+                <div class="card-body">
+                    <pre><span class="k">const</span> d = Temporal.Duration.<span class="m">from</span>(<span class="s">"P1Y2M3DT4H5M6S"</span>);
+
+d.<span class="m">years</span>; d.<span class="m">months</span>; d.<span class="m">weeks</span>;
+d.<span class="m">days</span>; d.<span class="m">hours</span>; d.<span class="m">minutes</span>;
+d.<span class="m">seconds</span>; d.<span class="m">milliseconds</span>;
+d.<span class="m">microseconds</span>; d.<span class="m">nanoseconds</span>;
+
+d.<span class="m">sign</span>;    <span class="c">// -1 | 0 | 1</span>
+d.<span class="m">blank</span>;   <span class="c">// true if all-zero</span><button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Arithmetic, round, total</h3>
+                    <span class="tag-type">methods</span>
+                </div>
+                <div class="card-body">
+                    <pre>d.<span class="m">with</span>({ hours: <span class="n">10</span> });
+d.<span class="m">negated</span>();
+d.<span class="m">abs</span>();
+d.<span class="m">add</span>(other);
+d.<span class="m">subtract</span>(other);
+
+<span class="c">// Normalize / round:</span>
+d.<span class="m">round</span>({
+  largestUnit: <span class="s">"hour"</span>,
+  smallestUnit: <span class="s">"minute"</span>,
+  relativeTo: zdt          <span class="c">// required for calendar units</span>
+});
+
+<span class="c">// Total as a single unit:</span>
+d.<span class="m">total</span>({ unit: <span class="s">"second"</span> });
+  <span class="c">// → number</span>
+
+Temporal.Duration.<span class="m">compare</span>(d1, d2, { relativeTo });<button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       SHARED API
+       ========================================================= -->
+    <section id="shared" class="block b3">
+        <h2>Shared interface across classes</h2>
+        <div class="card">
+            <div class="card-head">
+                <h3>Most Temporal classes share the same method shape</h3>
+                <span class="tag-type">reference table</span>
+            </div>
+            <div class="card-body">
+                <table class="ref">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Methods</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Construct</td>
+                            <td><code class="inline">new Class()</code>, <code class="inline">Class.from()</code></td>
+                            <td><code class="inline">.from()</code> accepts strings or property bags</td>
+                        </tr>
+                        <tr>
+                            <td>Update</td>
+                            <td><code class="inline">.with()</code>, <code class="inline">.withCalendar()</code>, <code
+                                    class="inline">.withTimeZone()</code>, <code class="inline">.withPlainTime()</code>
+                            </td>
+                            <td>All return new instances</td>
+                        </tr>
+                        <tr>
+                            <td>Arithmetic</td>
+                            <td><code class="inline">.add()</code>, <code class="inline">.subtract()</code></td>
+                            <td>Accepts Duration or property bag</td>
+                        </tr>
+                        <tr>
+                            <td>Diff</td>
+                            <td><code class="inline">.since(other)</code>, <code class="inline">.until(other)</code>
+                            </td>
+                            <td>Both return Duration</td>
+                        </tr>
+                        <tr>
+                            <td>Round</td>
+                            <td><code class="inline">.round({ smallestUnit, roundingMode })</code></td>
+                            <td>Not on PlainDate / PlainYearMonth / PlainMonthDay</td>
+                        </tr>
+                        <tr>
+                            <td>Compare</td>
+                            <td><code class="inline">.equals()</code>, <code class="inline">Class.compare(a, b)</code>
+                            </td>
+                            <td><code class="inline">compare</code> returns -1, 0, 1</td>
+                        </tr>
+                        <tr>
+                            <td>Serialize</td>
+                            <td><code class="inline">.toString()</code>, <code class="inline">.toJSON()</code>, <code
+                                    class="inline">.toLocaleString()</code></td>
+                            <td>JSON-safe RFC 9557 strings</td>
+                        </tr>
+                        <tr>
+                            <td>Value</td>
+                            <td><code class="inline">.valueOf()</code></td>
+                            <td>Throws — prevents accidental coercion with +/-/&lt;/&gt;</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="note warn">
+                    <strong>No <code class="inline">valueOf</code>:</strong> Temporal objects intentionally throw on
+                    numeric coercion. Always use <code class="inline">Class.compare()</code> or <code
+                        class="inline">.equals()</code>
+                    — never <code class="inline">&lt;</code>, <code class="inline">&gt;</code>, or <code
+                        class="inline">==</code>.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       CONVERSIONS
+       ========================================================= -->
+    <section id="conversions" class="block b3">
+        <h2>Conversions between classes</h2>
+        <div class="card">
+            <div class="card-head">
+                <h3>From → To matrix</h3>
+                <span class="tag-type">cheat table</span>
+            </div>
+            <div class="card-body">
+                <table class="ref">
+                    <thead>
+                        <tr>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>How</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Instant</td>
+                            <td>ZonedDateTime</td>
+                            <td><code class="inline">inst.toZonedDateTimeISO(tz)</code></td>
+                        </tr>
+                        <tr>
+                            <td>Instant</td>
+                            <td>PlainDate/Time</td>
+                            <td>via <code class="inline">ZonedDateTime</code></td>
+                        </tr>
+                        <tr>
+                            <td>ZonedDateTime</td>
+                            <td>Instant</td>
+                            <td><code class="inline">z.toInstant()</code></td>
+                        </tr>
+                        <tr>
+                            <td>ZonedDateTime</td>
+                            <td>PlainDateTime</td>
+                            <td><code class="inline">z.toPlainDateTime()</code></td>
+                        </tr>
+                        <tr>
+                            <td>ZonedDateTime</td>
+                            <td>PlainDate</td>
+                            <td><code class="inline">z.toPlainDate()</code></td>
+                        </tr>
+                        <tr>
+                            <td>ZonedDateTime</td>
+                            <td>PlainTime</td>
+                            <td><code class="inline">z.toPlainTime()</code></td>
+                        </tr>
+                        <tr>
+                            <td>PlainDateTime</td>
+                            <td>ZonedDateTime</td>
+                            <td><code class="inline">dt.toZonedDateTime(tz)</code></td>
+                        </tr>
+                        <tr>
+                            <td>PlainDateTime</td>
+                            <td>PlainDate/Time</td>
+                            <td><code class="inline">dt.toPlainDate() / toPlainTime()</code></td>
+                        </tr>
+                        <tr>
+                            <td>PlainDate</td>
+                            <td>PlainDateTime</td>
+                            <td><code class="inline">d.toPlainDateTime(time?)</code></td>
+                        </tr>
+                        <tr>
+                            <td>PlainDate</td>
+                            <td>ZonedDateTime</td>
+                            <td><code class="inline">d.toZonedDateTime({ timeZone, plainTime? })</code></td>
+                        </tr>
+                        <tr>
+                            <td>PlainDate</td>
+                            <td>PlainYearMonth</td>
+                            <td><code class="inline">d.toPlainYearMonth()</code></td>
+                        </tr>
+                        <tr>
+                            <td>PlainDate</td>
+                            <td>PlainMonthDay</td>
+                            <td><code class="inline">d.toPlainMonthDay()</code></td>
+                        </tr>
+                        <tr>
+                            <td>PlainYearMonth</td>
+                            <td>PlainDate</td>
+                            <td><code class="inline">ym.toPlainDate({ day })</code></td>
+                        </tr>
+                        <tr>
+                            <td>PlainMonthDay</td>
+                            <td>PlainDate</td>
+                            <td><code class="inline">md.toPlainDate({ year })</code></td>
+                        </tr>
+                        <tr>
+                            <td>legacy Date</td>
+                            <td>Instant</td>
+                            <td><code class="inline">Instant.fromEpochMilliseconds(date.getTime())</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       CALENDARS
+       ========================================================= -->
+    <section id="calendars" class="block">
+        <h2>Calendars</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-head">
+                    <h3>Working with non-ISO calendars</h3>
+                    <span class="tag-type">calendarId</span>
+                </div>
+                <div class="card-body">
+                    <p>Default is <code class="inline">"iso8601"</code>. Pass another id to interpret fields in that
+                        system.</p>
+                    <pre><span class="k">const</span> hebrew = Temporal.PlainDate.<span class="m">from</span>({
+  year: <span class="n">5786</span>, month: <span class="n">3</span>, day: <span class="n">14</span>,
+  calendar: <span class="s">"hebrew"</span>
+});
+
+hebrew.<span class="m">calendarId</span>;       <span class="c">// "hebrew"</span>
+hebrew.<span class="m">era</span>;              <span class="c">// "am"</span>
+hebrew.<span class="m">eraYear</span>;          <span class="c">// 5786</span>
+hebrew.<span class="m">monthCode</span>;        <span class="c">// "M03"</span>
+
+<span class="c">// List supported calendars:</span>
+Intl.<span class="m">supportedValuesOf</span>(<span class="s">"calendar"</span>);
+
+<span class="c">// Convert calendar of an existing date:</span>
+hebrew.<span class="m">withCalendar</span>(<span class="s">"iso8601"</span>);<button class="copy">copy</button></pre>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Calendar gotchas</h3>
+                    <span class="tag-type">tips</span>
+                </div>
+                <div class="card-body">
+                    <ul style="padding-left:18px; font-size:12px; color:var(--muted); line-height:1.7;">
+                        <li>Use <code class="inline">era</code> + <code class="inline">eraYear</code> together; or just
+                            <code class="inline">year</code>. Don't mix.</li>
+                        <li>Don't assume 12 months — use <code class="inline">monthsInYear</code>.</li>
+                        <li>Don't assume 365/366 days — use <code class="inline">daysInYear</code>.</li>
+                        <li>A leap year may add a leap <em>month</em>, not a leap day.</li>
+                        <li>For month <em>names</em>, format with <code class="inline">toLocaleString</code> — don't
+                            hard-code.</li>
+                        <li>Use <code class="inline">monthCode</code> for storage (e.g. birthdays); <code
+                                class="inline">month</code> for ordering.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       RFC 9557 FORMAT
+       ========================================================= -->
+    <section id="format" class="block">
+        <h2>RFC 9557 string format</h2>
+        <div class="card">
+            <div class="card-head">
+                <h3>The serialization grammar</h3>
+                <span class="tag-type">spec</span>
+            </div>
+            <div class="card-body">
+                <p>All Temporal types serialize via <code class="inline">toString()</code>/<code
+                        class="inline">toJSON()</code> using RFC 9557 (extension of ISO 8601 / RFC 3339).</p>
+                <pre><span class="c">// Full form:</span>
+YYYY-MM-DD T HH:mm:ss.sssssssss Z|±HH:mm [tz_id] [u-ca=cal_id]
+
+<span class="c">// Real examples:</span>
+<span class="s">"2025-12-25"</span>                                         <span class="c">// PlainDate</span>
+<span class="s">"2025-12"</span>                                            <span class="c">// PlainYearMonth</span>
+<span class="s">"--12-25"</span>                                            <span class="c">// PlainMonthDay</span>
+<span class="s">"09:30:00"</span>                                          <span class="c">// PlainTime</span>
+<span class="s">"2025-12-25T09:30:00"</span>                               <span class="c">// PlainDateTime</span>
+<span class="s">"2025-12-25T09:30:00Z"</span>                              <span class="c">// Instant (UTC)</span>
+<span class="s">"2025-12-25T09:30:00+05:30"</span>                         <span class="c">// Instant (offset)</span>
+<span class="s">"2025-12-25T09:30:00+05:30[Asia/Kolkata]"</span>           <span class="c">// ZonedDateTime</span>
+<span class="s">"2025-12-25T09:30:00+05:30[Asia/Kolkata][u-ca=hebrew]"</span>
+
+<span class="c">// Duration (ISO 8601):</span>
+<span class="s">"P1Y2M10DT2H30M"</span>     <span class="c">// 1 year, 2 months, 10 days, 2h30m</span>
+<span class="s">"PT1.5H"</span>             <span class="c">// 1.5 hours</span>
+<span class="s">"-PT5M"</span>              <span class="c">// negative 5 minutes</span><button class="copy">copy</button></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       DATE MIGRATION
+       ========================================================= -->
+    <section id="date-migration" class="block b3">
+        <h2>Migrating from <code class="inline">Date</code></h2>
+        <div class="grid">
+            <div class="card span-2">
+                <div class="card-head">
+                    <h3>Equivalents at a glance</h3>
+                    <span class="tag-type">old → new</span>
+                </div>
+                <div class="card-body">
+                    <table class="ref">
+                        <thead>
+                            <tr>
+                                <th>Legacy <code class="inline">Date</code></th>
+                                <th>Temporal equivalent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>new Date()</td>
+                                <td><code class="inline">Temporal.Now.instant()</code> / <code
+                                        class="inline">.zonedDateTimeISO()</code></td>
+                            </tr>
+                            <tr>
+                                <td>Date.now()</td>
+                                <td><code class="inline">Temporal.Now.instant().epochMilliseconds</code></td>
+                            </tr>
+                            <tr>
+                                <td>new Date(2025, 11, 25)</td>
+                                <td><code
+                                        class="inline">Temporal.PlainDate.from({ year: 2025, month: 12, day: 25 })</code>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>new Date(ms)</td>
+                                <td><code class="inline">Temporal.Instant.fromEpochMilliseconds(ms)</code></td>
+                            </tr>
+                            <tr>
+                                <td>d.getTime()</td>
+                                <td><code class="inline">d.epochMilliseconds</code></td>
+                            </tr>
+                            <tr>
+                                <td>d.getFullYear()</td>
+                                <td><code class="inline">d.year</code></td>
+                            </tr>
+                            <tr>
+                                <td>d.getMonth() // 0-11</td>
+                                <td><code class="inline">d.month // 1-12</code></td>
+                            </tr>
+                            <tr>
+                                <td>d.getDate()</td>
+                                <td><code class="inline">d.day</code></td>
+                            </tr>
+                            <tr>
+                                <td>d.getDay() // 0 Sun</td>
+                                <td><code class="inline">d.dayOfWeek // 1 Mon … 7 Sun</code></td>
+                            </tr>
+                            <tr>
+                                <td>d.setHours(x) // mutates</td>
+                                <td><code class="inline">d.with({ hour: x }) // returns new</code></td>
+                            </tr>
+                            <tr>
+                                <td>a - b // ms diff</td>
+                                <td><code class="inline">a.since(b)</code> / <code class="inline">.until(b)</code> →
+                                    Duration</td>
+                            </tr>
+                            <tr>
+                                <td>a &lt; b</td>
+                                <td><code class="inline">Class.compare(a, b) &lt; 0</code></td>
+                            </tr>
+                            <tr>
+                                <td>d.toISOString()</td>
+                                <td><code class="inline">d.toString()</code> / <code class="inline">d.toJSON()</code>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================
+       GOTCHAS
+       ========================================================= -->
+    <section id="gotchas" class="block">
+        <h2>Common gotchas</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-head">
+                    <h3>Pick the right type</h3>
+                    <span class="tag-type">when to use what</span>
+                </div>
+                <div class="card-body">
+                    <table class="ref">
+                        <tr>
+                            <td>Logging / timestamps</td>
+                            <td>Instant</td>
+                        </tr>
+                        <tr>
+                            <td>Meeting at 3pm NYC</td>
+                            <td>ZonedDateTime</td>
+                        </tr>
+                        <tr>
+                            <td>Birthday card</td>
+                            <td>PlainMonthDay</td>
+                        </tr>
+                        <tr>
+                            <td>Daily alarm 8:00</td>
+                            <td>PlainTime</td>
+                        </tr>
+                        <tr>
+                            <td>Invoice month</td>
+                            <td>PlainYearMonth</td>
+                        </tr>
+                        <tr>
+                            <td>Deadline date</td>
+                            <td>PlainDate</td>
+                        </tr>
+                        <tr>
+                            <td>Local form input</td>
+                            <td>PlainDateTime</td>
+                        </tr>
+                        <tr>
+                            <td>Elapsed time</td>
+                            <td>Duration</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Top mistakes</h3>
+                    <span class="tag-type">avoid</span>
+                </div>
+                <div class="card-body">
+                    <ul style="padding-left:18px; font-size:12px; line-height:1.75;">
+                        <li><strong>Using <code class="inline">&lt;</code> or <code class="inline">&gt;</code></strong>
+                            on Temporal objects — they throw. Use <code class="inline">Class.compare()</code>.</li>
+                        <li><strong>Treating <code class="inline">Instant</code> as a date</strong> — it has no calendar
+                            fields. Convert to <code class="inline">ZonedDateTime</code> first.</li>
+                        <li><strong>Skipping <code class="inline">relativeTo</code></strong> when rounding/totaling
+                            durations with calendar units (years, months, weeks).</li>
+                        <li><strong>Assuming a <code class="inline">PlainDateTime</code> identifies an instant</strong>
+                            — it doesn't until you attach a time zone.</li>
+                        <li><strong>Forgetting DST</strong>: a day can be 23 or 25 hours; use <code
+                                class="inline">hoursInDay</code>.</li>
+                        <li><strong>Using <code class="inline">year</code> across calendars</strong> for comparison —
+                            calendars are not interchangeable.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h3>Disambiguation &amp; overflow</h3>
+                    <span class="tag-type">options</span>
+                </div>
+                <div class="card-body">
+                    <pre><span class="c">// Disambiguation (DST gaps/overlaps):</span>
+<span class="s">"compatible"</span>  <span class="c">// default - matches legacy Date</span>
+<span class="s">"earlier"</span>     <span class="c">// pick the earlier offset</span>
+<span class="s">"later"</span>       <span class="c">// pick the later offset</span>
+<span class="s">"reject"</span>      <span class="c">// throw RangeError</span>
+
+<span class="c">// Overflow (e.g. Feb 30):</span>
+<span class="s">"constrain"</span>   <span class="c">// default - clamp to valid (Feb 28/29)</span>
+<span class="s">"reject"</span>      <span class="c">// throw RangeError</span>
+
+<span class="c">// Rounding modes (round / since / until / total):</span>
+<span class="s">"halfExpand"</span>  <span class="c">// default</span>
+<span class="s">"ceil"</span>, <span class="s">"floor"</span>, <span class="s">"trunc"</span>,
+<span class="s">"halfCeil"</span>, <span class="s">"halfFloor"</span>,
+<span class="s">"halfTrunc"</span>, <span class="s">"halfEven"</span><button class="copy">copy</button></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <span>Built from MDN's <a
+                href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal"
+                target="_blank" rel="noopener">Temporal reference</a> &amp; the TC39 proposal.</span>
+        <span>Click any <code class="inline">copy</code> button on a code block.</span>
+    </footer>
+
+</div>
+</body>
+</html>
